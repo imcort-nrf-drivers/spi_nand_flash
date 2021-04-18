@@ -1,0 +1,3 @@
+example/nRF52832/blank/arm5_no_packs/*
+!example/nRF52832/blank/arm5_no_packs/spi_nand_flash.uvoptx
+!example/nRF52832/blank/arm5_no_packs/spi_nand_flash.uvprojx
