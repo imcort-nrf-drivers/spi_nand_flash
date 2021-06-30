@@ -18,24 +18,6 @@
 // total row count
 #define NAND_FLASH_ROW_COUNT                NAND_FLASH_PAGE_COUNT_PER_BLOCK * NAND_FLASH_BLOCK_COUNT
 
-typedef struct
-{
-
-    uint16_t column;
-    uint16_t page;
-    uint16_t block;
-		uint16_t __not_used_;
-
-} nand_flash_addr_t;
-
-typedef struct
-{
-
-    uint16_t bad_blocks[40];
-		uint16_t bad_block_num;
-
-} nand_flash_badblocks_t;
-
 // Possible error codes, these are negative to allow
 // valid positive return values
 enum nand_spi_flash_error {
