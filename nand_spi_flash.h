@@ -61,8 +61,7 @@ uint8_t nand_spi_flash_read_status(void);
 // @row_address is block_address (first 18 bits) + page_address (6 bits)
 // @col_address is the byte address in the page
 // @returns number of bytes read or negative error code on error
-int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address, 
-  uint8_t * data, uint16_t read_len);
+int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address, uint8_t * data, uint16_t read_len);
 
 int nand_spi_flash_write_enable(void);
 
@@ -70,8 +69,7 @@ int nand_spi_flash_write_enable(void);
 // @row_address is block_address (first 18 bits) + page_address (6 bits)
 // @col_address is the byte address in the page
 // @returns number of bytes written or negative error code on error
-int nand_spi_flash_page_write(uint32_t row_address, uint16_t col_address, 
-  uint8_t * data, uint16_t data_len);
+int nand_spi_flash_page_write(uint32_t row_address, uint16_t col_address, uint8_t * data, uint16_t data_len);
 
 // Block erase
 int nand_spi_flash_block_erase(uint32_t row_address);

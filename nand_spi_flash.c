@@ -37,7 +37,7 @@ static uint32_t read_row_addr_in_cache = NAND_FLASH_ROW_COUNT;
 static int nand_spi_transfer(uint8_t *buffer, uint16_t tx_len, uint16_t rx_len)
 {
 	digitalWrite(SPI_NAND_FLASH_CS, LOW);
-    Debug("nand_spi_transfer size: TX: %d, RX: %d", tx_len, rx_len);
+    //Debug("nand_spi_transfer size: TX: %d, RX: %d", tx_len, rx_len);
     spi_transfer(buffer, tx_len, buffer, tx_len + rx_len);
 	digitalWrite(SPI_NAND_FLASH_CS, HIGH);
 		
@@ -103,8 +103,7 @@ int nand_spi_flash_init(void)
 //    m_nsf_buffer[1] = 0xB0;
 //    m_nsf_buffer[2] = 0x00;
     
-    nand_spi_flash_reset_unlock();
-    return nand_spi_flash_write_enable();
+    return nand_spi_flash_reset_unlock();
 
 }
 
@@ -126,12 +125,12 @@ uint8_t nand_spi_flash_read_status()
 int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address, uint8_t *buffer, uint16_t read_len)
 {
     // check data len
-    if ((read_len + col_address) >= NAND_FLASH_PER_PAGE_SIZE)   return NSF_ERR_DATA_TOO_BIG;
+    if ((read_len + col_address) > NAND_FLASH_PER_PAGE_SIZE)   return NSF_ERR_DATA_TOO_BIG;
     if (row_address >= NAND_FLASH_ROW_COUNT)                    return NSF_ERR_DATA_TOO_BIG;
     
-    // check if it is stored
-    if (read_row_addr_in_cache != row_address)
-    {
+//    // check if it is stored
+//    if (read_row_addr_in_cache != row_address)
+//    {
         // read page to nand cache buffer
         m_nsf_buffer[0] = NSF_CMD_READ_CELL_TO_CACHE;
         m_nsf_buffer[1] = (row_address & 0xff0000) >> 16;
@@ -149,9 +148,9 @@ int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address, uint8_t
             return NSF_ERR_BAD_BLOCK;
         }    
         
-        read_row_addr_in_cache = row_address;
-        
-    }
+//        read_row_addr_in_cache = row_address;
+//        
+//    }
     
     // read buffer from cache
     m_nsf_buffer[0] = 0x03;
@@ -177,8 +176,10 @@ int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address, uint8_t
 int nand_spi_flash_page_write(uint32_t row_address, uint16_t col_address, uint8_t *data, uint16_t data_len)
 {
     // check data len
-    if ((data_len + col_address) >= NAND_FLASH_PER_PAGE_SIZE)   return NSF_ERR_DATA_TOO_BIG;
+    if ((data_len + col_address) > NAND_FLASH_PER_PAGE_SIZE)   return NSF_ERR_DATA_TOO_BIG;
     if (row_address >= NAND_FLASH_ROW_COUNT)                    return NSF_ERR_DATA_TOO_BIG;
+    
+    nand_spi_flash_write_enable();
     
     // copy buffer to nand cache
     m_nsf_buffer[0] = NSF_CMD_PROGRAM_LOAD;
@@ -243,32 +244,32 @@ int nand_spi_flash_block_erase(uint32_t row_address)
 //-----------------------------------------------------------------------------
 const char *nand_spi_flash_str_error(int error)
 {
-  if (error >= 0)
-  {
-    return "NSF_ERR_OK";
-  }
-  switch (error)
-  {
-  case -1:
-    return "NSF_ERR_NOT_INITED";
-  case -2:
-    return "NSF_ERR_ALREADY_INITED";
-  case -3:
-    return "NSF_ERR_UNKNOWN_DEVICE";
-  case -4:
-    return "NSF_ERR_READ_ONLY";
-  case -5:
-    return "NSF_ERR_BAD_BLOCK";
-  case -6:
-    return "NSF_ERR_DATA_TOO_BIG";
-  case -7:
-    return "NSF_ERR_ERASE";
-  case -8:
-    return "NSF_ERR_PROGRAM";
-  case -100:
-    return "NSF_ERROR_SPI";
-  default:
-    return "NSF_UNKNOWN_ERROR";
-  }
+    if (error >= 0)
+    {
+        return "NSF_ERR_OK";
+    }
+    switch (error)
+    {
+        case -1:
+            return "NSF_ERR_NOT_INITED";
+        case -2:
+            return "NSF_ERR_ALREADY_INITED";
+        case -3:
+            return "NSF_ERR_UNKNOWN_DEVICE";
+        case -4:
+            return "NSF_ERR_READ_ONLY";
+        case -5:
+            return "NSF_ERR_BAD_BLOCK";
+        case -6:
+            return "NSF_ERR_DATA_TOO_BIG";
+        case -7:
+            return "NSF_ERR_ERASE";
+        case -8:
+            return "NSF_ERR_PROGRAM";
+        case -100:
+            return "NSF_ERROR_SPI";
+        default:
+            return "NSF_UNKNOWN_ERROR";
+    }
 }
 #endif
