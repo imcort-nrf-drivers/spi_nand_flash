@@ -28,18 +28,11 @@
 #define NSF_PAGE_READ_TIME_US 115
 #define NSF_RESET_TIME_MS 7
 
-// Nand Flash Device Specific
-// page size in bytes
-static uint16_t m_nsf_page_size_bytes = 2112;
-
-// block size in pages
-static uint16_t m_nsf_block_size_pages = 128;
-
-// blocks count in memory
-static uint16_t m_nsf_blocks_count = 2048;
-
 // spi read/write buffer
 static uint8_t m_nsf_buffer[255];
+
+// Which page data in nand cache, default is none.
+static uint32_t read_row_addr_in_cache = NAND_FLASH_ROW_COUNT;
 
 static int nand_spi_transfer(uint8_t *buffer, uint16_t tx_len, uint16_t rx_len)
 {
@@ -67,127 +60,77 @@ int nand_spi_flash_init(void)
         return NSF_ERROR_SPI;
     }
 	Debug("ID0 %x, ID1 %x", m_nsf_buffer[2], m_nsf_buffer[3]);
-	
-	
-//	m_nsf_buffer[0] = NSF_CMD_READ_ID;
-//  if (nand_spi_transfer(m_nsf_buffer, 2, 2) != 0)
-//  {
-//    return NSF_ERROR_SPI;
-//  }
 
 //    //Disable HSE Mode
 //    m_nsf_buffer[0] = 0x1F;
 //    m_nsf_buffer[1] = 0xB0;
 //    m_nsf_buffer[2] = 0x00;
 
-//    if (nand_spi_transfer(m_nsf_buffer, 3, 0) != 0)
-//    {
-//        return NSF_ERROR_SPI;
-//    }
-
-//  // identify device
-//  m_nsf_buffer[0] = NSF_CMD_READ_ID;
-//  if (nand_spi_transfer(m_nsf_buffer, 2, 2) != 0)
-//  {
-//    return NSF_ERROR_SPI;
-//  }
-//	
-//  if (m_nsf_buffer[2] == NSF_DEVICE_TOSHIBA_TC58CVx)
-//  { // Toshiba
-//    if (m_nsf_buffer[3] == NSF_DEVICE_TC58CVG2S0HxAIx)
-//    { // TC58CVG2S0HxAIx
-//      m_nsf_page_size_bytes = 4224;
-//      m_nsf_block_size_pages = 64;
-//      m_nsf_blocks_count = 2048;
-//    }
-//    else
-//    {
-//      return NSF_ERR_UNKNOWN_DEVICE;
-//    }
-//  }
-//	else if (m_nsf_buffer[1] == NSF_DEVICE_GIGADEVICE_GD5FxGQ4x)
-//  { // gygadevice
-//    if (m_nsf_buffer[2] == NSF_DEVICE_GD5F1GQ4R ||
-//        m_nsf_buffer[2] == NSF_DEVICE_GD5F1GQ4U)
-//    { // 1Gbit
-//      m_nsf_page_size_bytes = 2048;
-//      m_nsf_block_size_pages = 64;
-//      m_nsf_blocks_count = 1024;
-//    }
-//    else if (m_nsf_buffer[2] == NSF_DEVICE_GD5F2GQ4R ||
-//             m_nsf_buffer[2] == NSF_DEVICE_GD5F2GQ4U)
-//    { // 2Gbit
-//      m_nsf_page_size_bytes = 2048;
-//      m_nsf_block_size_pages = 64;
-//      m_nsf_blocks_count = 2048;
-//    }
-//    else
-//    {
-//      return NSF_ERR_UNKNOWN_DEVICE;
-//    }
-//  }
-//  else
-//  {
-//    return NSF_ERR_UNKNOWN_DEVICE;
-//  }
-//	
-//	return nand_spi_flash_reset_unlock();
+    return nand_spi_flash_reset_unlock();
 }
 
 //-----------------------------------------------------------------------------
 uint8_t nand_spi_flash_read_status()
 {
-  m_nsf_buffer[2] = NSF_OIP_MASK;
-  while (m_nsf_buffer[2] & NSF_OIP_MASK)
-  {
-    nrf_delay_us(NSF_PAGE_READ_TIME_US);
-    m_nsf_buffer[0] = NSF_CMD_GET_FEATURE;
-    m_nsf_buffer[1] = NSF_CMD_FEATURE_STATUS;
-    nand_spi_transfer(m_nsf_buffer, 2, 1);
-  }
-  return m_nsf_buffer[2];
+    m_nsf_buffer[2] = NSF_OIP_MASK;          //Operation in progress
+    while (m_nsf_buffer[2] & NSF_OIP_MASK)
+    {
+        nrf_delay_us(NSF_PAGE_READ_TIME_US);
+        m_nsf_buffer[0] = NSF_CMD_GET_FEATURE;
+        m_nsf_buffer[1] = NSF_CMD_FEATURE_STATUS;
+        nand_spi_transfer(m_nsf_buffer, 2, 1);
+    }
+    return m_nsf_buffer[2];
 }
 
 //-----------------------------------------------------------------------------
-int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address,
-                             uint8_t *buffer, uint16_t read_len)
+int nand_spi_flash_page_read(uint32_t row_address, uint16_t col_address, uint8_t *buffer, uint16_t read_len)
 {
-  // check data len
-  if (read_len > m_nsf_page_size_bytes)
-  {
-    return NSF_ERR_DATA_TOO_BIG;
-  }
+    // check data len
+    if (read_len >= NAND_FLASH_PER_PAGE_SIZE)           return NSF_ERR_DATA_TOO_BIG;
+    if (col_address >= NAND_FLASH_PER_PAGE_SIZE)     return NSF_ERR_DATA_TOO_BIG;
+    if (row_address >= NAND_FLASH_ROW_COUNT)            return NSF_ERR_DATA_TOO_BIG;
+    
+    // check if it is stored
+    if (read_row_addr_in_cache != row_address)
+    {
+        // read page to nand cache buffer
+        m_nsf_buffer[0] = NSF_CMD_READ_CELL_TO_CACHE;
+        m_nsf_buffer[1] = (row_address & 0xff0000) >> 16;
+        m_nsf_buffer[2] = (row_address & 0xff00) >> 8;
+        m_nsf_buffer[3] = row_address; // & 0xff;
+        
+        if (nand_spi_transfer(m_nsf_buffer, 4, 0) != 0)
+        {
+            return NSF_ERROR_SPI;
+        }
 
-  // read page to nand cache buffer
-  m_nsf_buffer[0] = NSF_CMD_READ_CELL_TO_CACHE;
-  m_nsf_buffer[1] = (row_address & 0xff0000) >> 16;
-  m_nsf_buffer[2] = (row_address & 0xff00) >> 8;
-  m_nsf_buffer[3] = row_address; // & 0xff;
-  if (nand_spi_transfer(m_nsf_buffer, 4, 0) != 0)
-  {
-    return NSF_ERROR_SPI;
-  }
+        // check status
+        if ((nand_spi_flash_read_status() & NSF_ECC_MASK) == NSF_ECC_MASK)
+        {
+            return NSF_ERR_BAD_BLOCK;
+        }    
+        
+        read_row_addr_in_cache = row_address;
+        
+    }
+    
+    // read buffer from cache
+    m_nsf_buffer[0] = 0x03;
+    m_nsf_buffer[1] = (col_address & 0xff00) >> 8;
+    m_nsf_buffer[2] = col_address; // & 0xff;
+    m_nsf_buffer[3] = 0x00;
+    
+    if (nand_spi_transfer(m_nsf_buffer, 4, read_len) != 0)
+    {
+        return NSF_ERROR_SPI;
+    }
 
-  // check status
-  if ((nand_spi_flash_read_status() & NSF_ECC_MASK) == NSF_ECC_MASK)
-  {
-    return NSF_ERR_BAD_BLOCK;
-  }
+    // copy data to output buffer
+    memcpy(buffer, &m_nsf_buffer[4], read_len);
 
-  // read buffer from cache
-  m_nsf_buffer[0] = 0x03;
-  m_nsf_buffer[1] = (col_address & 0xff00) >> 8;
-  m_nsf_buffer[2] = col_address; // & 0xff;
-  m_nsf_buffer[3] = 0x00;
-  if (nand_spi_transfer(m_nsf_buffer, 4, read_len) != 0)
-  {
-    return NSF_ERROR_SPI;
-  }
-
-  // copy data to output buffer
-  memcpy(buffer, &m_nsf_buffer[4], read_len);
-
-  return read_len;
+    return read_len;
+    
 }
 
 //-----------------------------------------------------------------------------
@@ -232,7 +175,7 @@ int nand_spi_flash_write_enable(void)
 int nand_spi_flash_page_write(uint32_t row_address, uint16_t col_address,
                               uint8_t *data, uint16_t data_len)
 {
-  if (data_len + col_address > m_nsf_page_size_bytes)
+  if (data_len + col_address > NAND_FLASH_PER_PAGE_SIZE)
   {
     return NSF_ERR_DATA_TOO_BIG;
   }

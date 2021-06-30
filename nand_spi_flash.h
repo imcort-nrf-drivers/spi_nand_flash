@@ -5,13 +5,18 @@
 
 #include <stdint.h>
 
-//// NAND SPI Flash configuration 
-//typedef struct nand_spi_flash_config_t {
-//  // SPI transfer function
-//  int (*spi_transfer)(uint8_t * buffer, uint16_t tx_len, uint16_t rx_len);
-//  // delay microseconds function
-//  void(*delay_us)(uint32_t delay);
-//} nand_spi_flash_config_t;
+// Nand Flash Device Specific
+// page size in bytes
+#define NAND_FLASH_PER_PAGE_SIZE            2112
+
+// block size in pages
+#define NAND_FLASH_PAGE_COUNT_PER_BLOCK     128
+
+// blocks count in memory
+#define NAND_FLASH_BLOCK_COUNT              2048
+
+// total row count
+#define NAND_FLASH_ROW_COUNT                NAND_FLASH_PAGE_COUNT_PER_BLOCK * NAND_FLASH_BLOCK_COUNT
 
 typedef struct
 {
