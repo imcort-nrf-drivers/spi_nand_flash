@@ -4,21 +4,22 @@
 
 static int nand_spi_transfer(uint8_t *buffer, uint16_t tx_len, uint16_t rx_len)
 {
-		digitalWrite(SPI_NAND_FLASH_CS, LOW);
+	digitalWrite(SPI_NAND_FLASH_CS, LOW);
+    Debug("nand_spi_transfer size: TX: %d, RX: %d", tx_len, rx_len);
     spi_transfer(buffer, tx_len, buffer, tx_len + rx_len);
-		digitalWrite(SPI_NAND_FLASH_CS, HIGH);
+	digitalWrite(SPI_NAND_FLASH_CS, HIGH);
 		
     return NSF_ERR_OK;
 }
 
-// Device Codes
-#define NSF_DEVICE_TOSHIBA_TC58CVx 0x98
-#define NSF_DEVICE_TC58CVG2S0HxAIx 0xCD // 4Gb
-#define NSF_DEVICE_GIGADEVICE_GD5FxGQ4x 0xC8
-#define NSF_DEVICE_GD5F1GQ4R 0xA1 // 1Gb 1.8v
-#define NSF_DEVICE_GD5F2GQ4R 0xA2 // 2Gb 1.8v
-#define NSF_DEVICE_GD5F1GQ4U 0xB1 // 1Gb 3.3v
-#define NSF_DEVICE_GD5F2GQ4U 0xB2 // 2Gb 3.3v
+//// Device Codes
+//#define NSF_DEVICE_TOSHIBA_TC58CVx 0x98
+//#define NSF_DEVICE_TC58CVG2S0HxAIx 0xCD // 4Gb
+//#define NSF_DEVICE_GIGADEVICE_GD5FxGQ4x 0xC8
+//#define NSF_DEVICE_GD5F1GQ4R 0xA1 // 1Gb 1.8v
+//#define NSF_DEVICE_GD5F2GQ4R 0xA2 // 2Gb 1.8v
+//#define NSF_DEVICE_GD5F1GQ4U 0xB1 // 1Gb 3.3v
+//#define NSF_DEVICE_GD5F2GQ4U 0xB2 // 2Gb 3.3v
 
 // Nand Flash Commands
 #define NSF_CMD_MAX_BYTES 4
@@ -80,16 +81,18 @@ uint16_t nand_spi_flash_blocks_count()
 int nand_spi_flash_init(void)
 {
   // check spi driver already inited and copy config
-  pinMode(SPI_NAND_FLASH_CS, OUTPUT);
+    pinMode(SPI_NAND_FLASH_CS, OUTPUT);
 	digitalWrite(SPI_NAND_FLASH_CS, HIGH);
+    
+    spi_init();
 	
 	m_nsf_buffer[0] = NSF_CMD_READ_ID;
 	m_nsf_buffer[1] = 0x00;
-  if (nand_spi_transfer(m_nsf_buffer, 2, 2) != 0)
-  {
+    if (nand_spi_transfer(m_nsf_buffer, 2, 2) != 0)
+    {
     return NSF_ERROR_SPI;
-  }
-	Debug("ID0 %x, ID1 %x, ID2 %x", m_nsf_buffer[2], m_nsf_buffer[3]);
+    }
+	Debug("ID0 %x, ID1 %x", m_nsf_buffer[2], m_nsf_buffer[3]);
 	
 	
 //	m_nsf_buffer[0] = NSF_CMD_READ_ID;
@@ -98,15 +101,15 @@ int nand_spi_flash_init(void)
 //    return NSF_ERROR_SPI;
 //  }
 
-//  //Disable HSE Mode
-//  m_nsf_buffer[0] = 0x1F;
-//  m_nsf_buffer[1] = 0xB0;
-//  m_nsf_buffer[2] = 0x00;
+//    //Disable HSE Mode
+//    m_nsf_buffer[0] = 0x1F;
+//    m_nsf_buffer[1] = 0xB0;
+//    m_nsf_buffer[2] = 0x00;
 
-//  if (nand_spi_transfer(m_nsf_buffer, 3, 0) != 0)
-//  {
-//    return NSF_ERROR_SPI;
-//  }
+//    if (nand_spi_transfer(m_nsf_buffer, 3, 0) != 0)
+//    {
+//        return NSF_ERROR_SPI;
+//    }
 
 //  // identify device
 //  m_nsf_buffer[0] = NSF_CMD_READ_ID;
@@ -239,14 +242,15 @@ int nand_spi_flash_reset_unlock()
 //-----------------------------------------------------------------------------
 int nand_spi_flash_write_enable(void)
 {
-		// write enable
-		//NRF_LOG_INFO("flash write en.");
-		m_nsf_buffer[0] = NSF_CMD_WRITE_ENABLE;
-		if (nand_spi_transfer(m_nsf_buffer, 1, 0) != 0)
-		{
-			return NSF_ERROR_SPI;
-		}
-		return NSF_ERR_OK;
+    
+    // write enable
+    //NRF_LOG_INFO("flash write en.");
+    m_nsf_buffer[0] = NSF_CMD_WRITE_ENABLE;
+    if (nand_spi_transfer(m_nsf_buffer, 1, 0) != 0)
+    {
+        return NSF_ERROR_SPI;
+    }
+    return NSF_ERR_OK;
 		
 }
 
