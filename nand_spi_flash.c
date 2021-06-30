@@ -1,25 +1,5 @@
 #include "nand_spi_flash.h"
-
 #include "transfer_handler.h"
-
-static int nand_spi_transfer(uint8_t *buffer, uint16_t tx_len, uint16_t rx_len)
-{
-	digitalWrite(SPI_NAND_FLASH_CS, LOW);
-    Debug("nand_spi_transfer size: TX: %d, RX: %d", tx_len, rx_len);
-    spi_transfer(buffer, tx_len, buffer, tx_len + rx_len);
-	digitalWrite(SPI_NAND_FLASH_CS, HIGH);
-		
-    return NSF_ERR_OK;
-}
-
-//// Device Codes
-//#define NSF_DEVICE_TOSHIBA_TC58CVx 0x98
-//#define NSF_DEVICE_TC58CVG2S0HxAIx 0xCD // 4Gb
-//#define NSF_DEVICE_GIGADEVICE_GD5FxGQ4x 0xC8
-//#define NSF_DEVICE_GD5F1GQ4R 0xA1 // 1Gb 1.8v
-//#define NSF_DEVICE_GD5F2GQ4R 0xA2 // 2Gb 1.8v
-//#define NSF_DEVICE_GD5F1GQ4U 0xB1 // 1Gb 3.3v
-//#define NSF_DEVICE_GD5F2GQ4U 0xB2 // 2Gb 3.3v
 
 // Nand Flash Commands
 #define NSF_CMD_MAX_BYTES 4
@@ -48,33 +28,27 @@ static int nand_spi_transfer(uint8_t *buffer, uint16_t tx_len, uint16_t rx_len)
 #define NSF_PAGE_READ_TIME_US 115
 #define NSF_RESET_TIME_MS 7
 
-// config instance
-//static nand_spi_flash_config_t m_nsf_config;
+// Nand Flash Device Specific
+// page size in bytes
+static uint16_t m_nsf_page_size_bytes = 2112;
+
+// block size in pages
+static uint16_t m_nsf_block_size_pages = 128;
+
+// blocks count in memory
+static uint16_t m_nsf_blocks_count = 2048;
 
 // spi read/write buffer
 static uint8_t m_nsf_buffer[255];
 
-// page size in bytes
-static uint16_t m_nsf_page_size_bytes = 0;
-
-// block size in pages
-static uint16_t m_nsf_block_size_pages = 0;
-
-// blocks count in memory
-static uint16_t m_nsf_blocks_count = 0;
-
-//-----------------------------------------------------------------------------
-uint16_t nand_spi_flash_page_size_bytes()
+static int nand_spi_transfer(uint8_t *buffer, uint16_t tx_len, uint16_t rx_len)
 {
-  return m_nsf_page_size_bytes;
-}
-uint16_t nand_spi_flash_block_size_pages()
-{
-  return m_nsf_block_size_pages;
-}
-uint16_t nand_spi_flash_blocks_count()
-{
-  return m_nsf_blocks_count;
+	digitalWrite(SPI_NAND_FLASH_CS, LOW);
+    Debug("nand_spi_transfer size: TX: %d, RX: %d", tx_len, rx_len);
+    spi_transfer(buffer, tx_len, buffer, tx_len + rx_len);
+	digitalWrite(SPI_NAND_FLASH_CS, HIGH);
+		
+    return NSF_ERR_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -90,7 +64,7 @@ int nand_spi_flash_init(void)
 	m_nsf_buffer[1] = 0x00;
     if (nand_spi_transfer(m_nsf_buffer, 2, 2) != 0)
     {
-    return NSF_ERROR_SPI;
+        return NSF_ERROR_SPI;
     }
 	Debug("ID0 %x, ID1 %x", m_nsf_buffer[2], m_nsf_buffer[3]);
 	
